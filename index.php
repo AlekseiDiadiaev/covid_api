@@ -1,108 +1,46 @@
 <?php
-// [id] => 28
-// [date] => 2020-11-17
-// [day] => 17
-// [month] => 11
-// [year] => 2020
-// [cases] => 65
-// [deaths] => 6
-// [country] => Afghanistan
-// [population] => 38041757
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept");
+header('Content-type: json/application');
+
 require_once 'configDb.php';
 require_once 'getAllData.php';
-require_once 'getDataForPeriod.php';      
+require_once 'getDataByDayForPeriod.php';      
 require_once 'getUniqueCountries.php';
 require_once 'getPopulation.php';
-
-echo '<pre>';
-
-function getDataByCountries($to, $from) {
-    $allData = getAllData();
-    $dataForPeiod = getDataForPeriod($to, $from); 
-
-    $arrPopulation = getPopulation();
-    
-    $resData = []; 
-    foreach($arrPopulation as $key => $item) {
-        $resData[] = [
-            "country" => $key,
-            "popData2019" => $item,
-            "cases" => 0,
-            "deaths" => 0,
-            "allCases" => 0,
-            "allDeaths" => 0,
-            "casesPer1000" => 0,
-            "deathsPer1000" => 0,
-            "averageCasesPerDay" => 0,
-            "averageDeathsPerDay" => 0,
-            "maxCasesPerDay" => 0,
-            "maxDeathsPerDay" => 0
-        ];
-    }
+require_once 'getDataByCountries.php';
+require_once 'getMinMaxDate.php';
 
 
-    foreach($allData as $item) {
-        $index = array_search($item['country'], array_column($resData, 'country'));
-        if($index !== false) {
-            $resData[$index]['allCases'] += $item['cases'];
-            $resData[$index]['allDeaths'] += $item['deaths'];
-        if($item['population'] > 0 && $resData[$index]['popData2019'] === 0) {
-            $resData[$index]['popData2019'] = $item['population'];
-        }  
-        }
-    }
+switch($_GET['q']) {
+    case 'alldata':        
+        ['minDate' => $min, 'maxDate' => $max] = getMinMaxDate();
+        $data = getDataByCountries($min, $max);
+        $res = json_encode($data);   
+        print_r($res); 
+        break;
+    case 'data':     
+        $data = getDataByCountries($_GET['from'], $_GET['to']);
+        $res = json_encode($data);
+        print_r($res);  
+        break;
+    case 'databyday':     
+        $data = getDataByDayForPeriod($_GET['from'], $_GET['to']);
+        $res = json_encode($data);
+        print_r($res);  
+        break;
+    case 'minmax':     
+        $res = json_encode(getMinMaxDate());
+        print_r($res);       
+        break;   
+    case 'countries':     
+        $res = json_encode(getUniqueCountries());
+        print_r($res);       
+        break;    
 
-    foreach($dataForPeiod as $item) {
-        $index = array_search($item['country'], array_column($resData, 'country'));
-        if($index !== false) {
-            $resData[$index]['cases'] += $item['cases'];
-            $resData[$index]['deaths'] += $item['deaths'];
-        }
-    }
-
-    $days_diff = round((strtotime($from) - strtotime($to)) / (60 * 60 * 24));
-
-    function getMaxNumPerDay($dataForPeiod, $item, $arg){
-
-        $arrDaysCurrentCountry = array_filter($dataForPeiod, function($value) use ($item) {
-            return $item['country'] === $value['country'];
-        });
-
-        $arrCasesPerDays = array_map(function($value) use($arg) {
-            return $value[$arg];
-        }, $arrDaysCurrentCountry);
-        if(count($arrDaysCurrentCountry) > 0){
-            $res = max($arrCasesPerDays);
-        } else {
-            $res = 0;
-        }
-        return $res;
-    }
-
-    foreach($resData as &$item) {
-        if($item['allCases'] && $item['popData2019']){
-            $res = $item['allCases'] / ($item['popData2019'] / 1000);
-            $res = round($res, 5);
-            $item['casesPer1000'] = $res;   
-        }
-        if($item['allDeaths'] && $item['popData2019']){
-            $res = $item['allDeaths'] / ($item['popData2019'] / 1000);
-            $res = round($res, 5);
-            $item['deathsPer1000'] = $res;   
-        }
-
-        $item['averageCasesPerDay'] = round( $item['cases'] / $days_diff);
-        $item['averageDeathsPerDay'] = round( $item['deaths'] / $days_diff);
-
-        $item['maxCasesPerDay'] = getMaxNumPerDay($dataForPeiod, $item, 'cases');
-        $item['maxDeathsPerDay'] = getMaxNumPerDay($dataForPeiod, $item, 'deaths');
-    }
-
-    
-
-
-    print_r($resData);
+    default:
+        http_response_code(404);
+        print_r('{"status": false, "message": "Not found"}');    
 }
 
-getDataByCountries('2020-05-20', '2020-05-25');
 

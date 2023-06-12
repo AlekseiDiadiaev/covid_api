@@ -1,11 +1,11 @@
 <?php
-function getDataForPeriod($to, $from){
+function getDataByDayForPeriod($from, $to){
     $conn = mysqli_connect(SERVER, USER, PASSWORD, DB);
     if (!$conn) {
         die("Connection failed: " . mysqli_connect_error());
     }
 
-    $sql = "SELECT * FROM base WHERE date >= '{$to}' AND date <= '{$from}'";
+    $sql = "SELECT * FROM base WHERE date >= '{$from}' AND date <= '{$to}'";
     $result = mysqli_query($conn, $sql);
 
     if (!$result) {
